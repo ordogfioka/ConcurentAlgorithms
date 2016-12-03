@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <vector>
+#include <chrono>
+#include <ctime>
 
 #define M 6
 #define N 1
@@ -18,89 +20,106 @@ int Pow24[7] = {1, 24, 576, 13824, 331776, 7962624, 191102976}; //, 4586471424L,
 
 void n2tuple(int k, vector<int>& ret)
 {
-  for (int i = 0; i < M*N; ++i) {
-    ret[i] = (k % 24);
-    k = k / 24;
-  }
+	for (int i = 0; i < M*N; ++i) 
+	{
+		ret[i] = (k % 24);
+		k = k / 24;
+	}
 }
-
+std::chrono::time_point<std::chrono::system_clock> start, end;
 int main()
 {
-  vector<bool> known(NSTATES, false);
-  known[0] = true;
+	start = std::chrono::system_clock::now();
+	vector<bool> known(NSTATES, false);
+	known[0] = true;
 
-  vector<bool> newKnown(NSTATES, false);
-  newKnown[0] = true;
+	vector<bool> newKnown(NSTATES, false);
+	newKnown[0] = true;
 
-  int nKnown = 0;
-  int nNewKnown = 1;
-  int level = 0;
+	int nKnown = 0;
+	int nNewKnown = 1;
+	int level = 0;
 
-  vector<int> tuple(M*N);
+	vector<int> tuple(M*N);
 
-  while (nKnown != nNewKnown) {
-    cout << "There are " << (nNewKnown - nKnown) << " states on level " << level << " .\n";
-    ++level;
-    nKnown = nNewKnown;
-    int curr, j, k, neighb, ;
-    for (curr = 0; curr < NSTATES; ++curr) {
-      // For all known points
-      if (known[curr]) {
-	// Convert to tuple
-	n2tuple(curr, tuple);
-	
-	// For all its neighbours, make them known, too.
-	// For each row
-	for (j = 0; j < M; ++j) {
-	  // Up neighbour
-	  neighb = curr;
-	  for (k = j*N; k < (j+1)*N; ++k) {
-	    neighb += Up[tuple[k]] * Pow24[k];
-	  }
-	  if (!newKnown[neighb]) {
-	    ++nNewKnown; 
-	    newKnown[neighb] = true;
-	  }
-	  // Down neighbour
-	  neighb = curr;
-	  for (k = j*N; k < (j+1)*N; ++k) {
-	    neighb += Down[tuple[k]] * Pow24[k];
-	  }
-	  if (!newKnown[neighb]) {
-	    ++nNewKnown; 
-	    newKnown[neighb] = true;
-	  }
-	}
-	// For each column
-	for (j = 0; j < N; ++j) {
-	  // Left neighbour
-	  neighb = curr;
-	  for (k = j; k < M*N; k += N) {
-	    neighb += Left[tuple[k]] * Pow24[k];
-	  }
-	  if (!newKnown[neighb]) {
-	    ++nNewKnown; 
-	    newKnown[neighb] = true;
-	  }
-	  // Right neighbour
-	  neighb = curr;
-	  for (k = j; k < M*N; k += N) {
-	    neighb += Right[tuple[k]] * Pow24[k];
-	  }
-	  if (!newKnown[neighb]) {
-	    ++nNewKnown; 
-	    newKnown[neighb] = true;
-	  }
-	}
-      }
-    }
-    for (int i = 0; i < NSTATES; ++i) {
-      if (newKnown[i] && !known[i]) {
-	known[i] = true;
-      }
-    }
-    cout << endl;
+	while (nKnown != nNewKnown) 
+	{
+		cout << "There are " << (nNewKnown - nKnown) << " states on level " << level << " .\n";
+		++level;
+		nKnown = nNewKnown;
+		int curr, j, k, neighb;
+		for (curr = 0; curr < NSTATES; ++curr) 
+		{
+			// For all known points
+			if (known[curr]) 
+			{
+				// Convert to tuple
+				n2tuple(curr, tuple);
 
-  }
-  cout << "Altogether " << nKnown << " states reached.\n";
+				// For all its neighbours, make them known, too.
+				// For each row
+				for (j = 0; j < M; ++j) 
+				{
+					// Up neighbour
+					neighb = curr;
+					for (k = j*N; k < (j+1)*N; ++k) 
+					{
+						neighb += Up[tuple[k]] * Pow24[k];
+					}
+					if (!newKnown[neighb]) 
+					{
+						++nNewKnown; 
+						newKnown[neighb] = true;
+					}
+					// Down neighbour
+					neighb = curr;
+					for (k = j*N; k < (j+1)*N; ++k) 
+					{
+						neighb += Down[tuple[k]] * Pow24[k];
+					}
+					if (!newKnown[neighb]) 
+					{
+						++nNewKnown; 
+						newKnown[neighb] = true;
+					}
+				}
+				// For each column
+				for (j = 0; j < N; ++j) 
+				{
+					// Left neighbour
+					neighb = curr;
+					for (k = j; k < M*N; k += N) 
+					{
+						neighb += Left[tuple[k]] * Pow24[k];
+					}
+					if (!newKnown[neighb]) 
+					{
+						++nNewKnown; 
+						newKnown[neighb] = true;
+					}
+					// Right neighbour
+					neighb = curr;
+					for (k = j; k < M*N; k += N) 
+					{
+						neighb += Right[tuple[k]] * Pow24[k];
+					}
+					if (!newKnown[neighb]) 
+					{
+						++nNewKnown; 
+						newKnown[neighb] = true;
+					}
+				}
+			}
+		}
+		for (int i = 0; i < NSTATES; ++i) 
+		{
+			if (newKnown[i] && !known[i]) 
+			{
+				known[i] = true;
+			}
+		}
+		cout << endl;
+
+	}//while
+	cout << "Altogether " << nKnown << " states reached.\n";
 }
