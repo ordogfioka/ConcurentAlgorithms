@@ -20,7 +20,7 @@ int Pow24[7] = {1, 24, 576, 13824, 331776, 7962624, 191102976}; //, 4586471424L,
 vector<bool> known(NSTATES, false);
 vector<bool> newKnown(NSTATES, false);
 vector<int> myTuple(M*N);
-int nNewKnown;
+atomic<int> nNewKnown;
 
 void n2myTuple(int k, vector<int>& ret)
 {
@@ -31,7 +31,7 @@ void n2myTuple(int k, vector<int>& ret)
 	}
 }
 
-int doit(int start,int end)
+void doit(int start,int end)
 {
 	int myNewKnown = 0;
 	int curr, j, k, neighb;
@@ -98,7 +98,7 @@ int doit(int start,int end)
 			}
 		}
 	}
-	return myNewKnown;
+	nNewKnown += myNewKnown;
 }
 
 void doit2(int begin,int end)
@@ -133,17 +133,16 @@ int main()
 		if(THREADS > 1)
 		{
 			//concurrent threads
-			std::vector<std::future<int>> results;
+			std::vector<thread> results;
 			for (size_t i = 0; i < THREADS-1; i++)
 			{
-				results.push_back(std::async(std::launch::async,doit,i*(NSTATES/THREADS),(i+1)*(NSTATES/THREADS) ));
+				results.push_back(thread(doit,i*(NSTATES/THREADS),(i+1)*(NSTATES/THREADS) ));
 			}
-			results.push_back(std::async(std::launch::async,doit,(THREADS-1)*(NSTATES/THREADS),NSTATES ));
+			results.push_back(thread(doit,(THREADS-1)*(NSTATES/THREADS),NSTATES ));
 
 			for (size_t i = 0; i < THREADS; i++)
 			{
-				results[i].wait();
-				nNewKnown += results[i].get();
+				results[i].join();
 			}
 		} else {
 			doit(0,NSTATES);
@@ -152,16 +151,16 @@ int main()
 		if(THREADS > 1)
 		{
 			//concurrent threads
-			std::vector<std::future<void>> results;
+			std::vector<thread> results;
 			for (size_t i = 0; i < THREADS-1; i++)
 			{
-				results.push_back(std::async(std::launch::async,doit2,i*(NSTATES/THREADS),(i+1)*(NSTATES/THREADS) ));
+				results.push_back(thread(doit2,i*(NSTATES/THREADS),(i+1)*(NSTATES/THREADS) ));
 			}
-			results.push_back(std::async(std::launch::async,doit2,(THREADS-1)*(NSTATES/THREADS),NSTATES ));
+			results.push_back(thread(doit2,(THREADS-1)*(NSTATES/THREADS),NSTATES ));
 
 			for (size_t i = 0; i < THREADS; i++)
 			{
-				results[i].wait();
+				results[i].join();
 			}
 		} else {
 			doit2(0,NSTATES);
