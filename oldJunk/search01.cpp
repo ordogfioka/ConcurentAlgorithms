@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <vector>
-#include <thread>
-#include <atomic>
+#include <future>
 
 #define M 6
 #define N 1
@@ -21,8 +20,7 @@ int Pow24[7] = {1, 24, 576, 13824, 331776, 7962624, 191102976}; //, 4586471424L,
 vector<bool> known(NSTATES, false);
 vector<bool> newKnown(NSTATES, false);
 vector<int> myTuple(M*N);
-atomic<int> nNewKnown;
-int THREADS = 3;
+int nNewKnown;
 
 void n2myTuple(int k, vector<int>& ret)
 {
@@ -33,11 +31,11 @@ void n2myTuple(int k, vector<int>& ret)
 	}
 }
 
-void doit(int start,int end)
+int doit(int start,int end)
 {
 	int myNewKnown = 0;
 	int curr, j, k, neighb;
-	for (curr = 0; curr < NSTATES; ++curr) 
+	for (curr = start; curr < end; ++curr) 
 	{
 		// For all known points
 		if (known[curr]) 
@@ -100,11 +98,24 @@ void doit(int start,int end)
 			}
 		}
 	}
-	nNewKnown += myNewKnown;
+	return myNewKnown;
+}
+
+void doit2(int begin,int end)
+{
+	for (int i = begin; i < end; ++i) 
+	{
+		if (newKnown[i] && !known[i]) 
+		{
+			known[i] = true;
+		}
+	}
 }
 
 int main()
 {
+	int THREADS = std::thread::hardware_concurrency();
+	cout <<"The program will use "<<THREADS << " concurent threads!"<<endl;
 	known[0] = true;
 	newKnown[0] = true;
 
@@ -119,25 +130,41 @@ int main()
 		++level;
 		nKnown = nNewKnown;
 		
-		//ide a parhuzamositast
-		std::vector<std::thread> results;
-		for (size_t i = 0; i < THREADS-1; i++)
+		if(THREADS > 1)
 		{
-			results.push_back(thread(doit,i*(NSTATES/THREADS),(i+1)*(NSTATES/THREADS) ));
-		}
-		results.push_back(thread(doit,(NSTATES-1)*(NSTATES/THREADS),NSTATES ));
+			//concurrent threads
+			std::vector<std::future<int>> results;
+			for (size_t i = 0; i < THREADS-1; i++)
+			{
+				results.push_back(std::async(std::launch::async,doit,i*(NSTATES/THREADS),(i+1)*(NSTATES/THREADS) ));
+			}
+			results.push_back(std::async(std::launch::async,doit,(THREADS-1)*(NSTATES/THREADS),NSTATES ));
 
-		for (size_t i = 0; i < THREADS; i++)
-		{
-			results[i].join();
+			for (size_t i = 0; i < THREADS; i++)
+			{
+				results[i].wait();
+				nNewKnown += results[i].get();
+			}
+		} else {
+			doit(0,NSTATES);
 		}
 		
-		for (int i = 0; i < NSTATES; ++i) 
+		if(THREADS > 1)
 		{
-			if (newKnown[i] && !known[i]) 
+			//concurrent threads
+			std::vector<std::future<void>> results;
+			for (size_t i = 0; i < THREADS-1; i++)
 			{
-				known[i] = true;
+				results.push_back(std::async(std::launch::async,doit2,i*(NSTATES/THREADS),(i+1)*(NSTATES/THREADS) ));
 			}
+			results.push_back(std::async(std::launch::async,doit2,(THREADS-1)*(NSTATES/THREADS),NSTATES ));
+
+			for (size_t i = 0; i < THREADS; i++)
+			{
+				results[i].wait();
+			}
+		} else {
+			doit2(0,NSTATES);
 		}
 		cout << endl;
 
