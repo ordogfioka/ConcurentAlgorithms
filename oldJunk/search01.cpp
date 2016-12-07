@@ -10,9 +10,7 @@
 #define M 6
 #define N 1
 #define NSTATES 24*24*24*24*24*24 // Should be 24^(N*M)
-#define THREAD_COUNT 8	
-
-using namespace std;
+#define THREAD_COUNT 8
 
 // mutex m;
 
@@ -24,7 +22,7 @@ int Right[24] = { 13, 18, 5, 15, 2, 7, 9, 14, -7, 11, -10, 3, -3, 10, -11, 7, -1
 
 int Pow24[7] = { 1, 24, 576, 13824, 331776, 7962624, 191102976 }; //, 4586471424L, 110075314176L, 2641807540224L;
 
-void n2tuple(int k, vector<int>& ret)
+void n2tuple(int k, std::vector<int>& ret)
 {
 	for (int i = 0; i < M*N; ++i)
 	{
@@ -33,9 +31,9 @@ void n2tuple(int k, vector<int>& ret)
 	}
 }
 
-void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKnown, std::atomic<int> &nNewKnown)
+void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<bool> &newKnown, std::atomic<int> &nNewKnown)
 {
-	vector<int> tuple(M*N);
+	std::vector<int> tuple(M*N);
 	int curr, j, k, neighb;
 	int found = 0;
 	for (curr = from; curr < to; ++curr)
@@ -106,28 +104,28 @@ void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKno
 	// std::cout << nNewKnown << "\n";
 }
 
-int main()
+int main(int argc, char** argv)
 {
-	vector<bool> known(NSTATES, false);
+	std::vector<bool> known(NSTATES, false);
 	known[0] = true;
 
-	vector<bool> newKnown(NSTATES, false);
+	std::vector<bool> newKnown(NSTATES, false);
 	newKnown[0] = true;
 
 	int nKnown = 0;
 	std::atomic<int> nNewKnown(1);
 	int level = 0;
 
-	chrono::time_point<chrono::system_clock> start, end;
-	start = chrono::system_clock::now();
+	std::chrono::time_point<std::chrono::system_clock> start, end;
+	start = std::chrono::system_clock::now();
 
 	while (nKnown != nNewKnown)
 	{
-		cout << "There are " << (nNewKnown - nKnown) << " states on level " << level << " .\n";
+		std::cout << "There are " << (nNewKnown - nKnown) << " states on level " << level << " .\n";
 		++level;
 		nKnown = nNewKnown;
 
-		thread threads[THREAD_COUNT - 1];
+		std::thread threads[THREAD_COUNT - 1];
 		int from = 0;
 		int to;
 		int interval = NSTATES / THREAD_COUNT;
@@ -153,13 +151,13 @@ int main()
 				known[i] = true;
 			}
 		}
-		cout << endl;
+		std::cout << std::endl;
 
 	}
-	end = chrono::system_clock::now();
-	chrono::duration<double> elapsed_seconds = end - start;
+	end = std::chrono::system_clock::now();
+	std::chrono::duration<double> elapsed_seconds = end - start;
 
-	cout << "Altogether " << nKnown << " states reached.\n";
+	std::cout << "Altogether " << nKnown << " states reached.\n";
 
-	cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
+	std::cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
 }
