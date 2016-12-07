@@ -34,9 +34,9 @@ void n2tuple(int k, std::vector<int>& ret)
 void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<bool> &newKnown, std::atomic<int> &nNewKnown)
 {
 	std::vector<int> tuple(M*N);
-	int curr, j, k, neighb;
+	int neighb;
 	int found = 0;
-	for (curr = from; curr < to; ++curr)
+	for (int curr = from; curr < to; ++curr)
 	{
 		// For all known points
 		if (known[curr])
@@ -46,11 +46,11 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 
 			// For all its neighbours, make them known, too.
 			// For each row
-			for (j = 0; j < M; ++j)
+			for (int j = 0; j < M; ++j)
 			{
 				// Up neighbour
 				neighb = curr;
-				for (k = j*N; k < (j + 1)*N; ++k)
+				for (int k = j*N; k < (j + 1)*N; ++k)
 				{
 					neighb += Up[tuple[k]] * Pow24[k];
 				}
@@ -61,7 +61,7 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 				}
 				// Down neighbour
 				neighb = curr;
-				for (k = j*N; k < (j + 1)*N; ++k)
+				for (int k = j*N; k < (j + 1)*N; ++k)
 				{
 					neighb += Down[tuple[k]] * Pow24[k];
 				}
@@ -72,11 +72,11 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 				}
 			}
 			// For each column
-			for (j = 0; j < N; ++j)
+			for (int j = 0; j < N; ++j)
 			{
 				// Left neighbour
 				neighb = curr;
-				for (k = j; k < M*N; k += N)
+				for (int k = j; k < M*N; k += N)
 				{
 					neighb += Left[tuple[k]] * Pow24[k];
 				}
@@ -87,7 +87,7 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 				}
 				// Right neighbour
 				neighb = curr;
-				for (k = j; k < M*N; k += N)
+				for (int k = j; k < M*N; k += N)
 				{
 					neighb += Right[tuple[k]] * Pow24[k];
 				}
@@ -116,8 +116,7 @@ int main(int argc, char** argv)
 	std::atomic<int> nNewKnown(1);
 	int level = 0;
 
-	std::chrono::time_point<std::chrono::system_clock> start, end;
-	start = std::chrono::system_clock::now();
+	auto start = std::chrono::system_clock::now();
 
 	while (nKnown != nNewKnown)
 	{
@@ -154,7 +153,7 @@ int main(int argc, char** argv)
 		std::cout << std::endl;
 
 	}
-	end = std::chrono::system_clock::now();
+	auto end = std::chrono::system_clock::now();
 	std::chrono::duration<double> elapsed_seconds = end - start;
 
 	std::cout << "Altogether " << nKnown << " states reached.\n";
