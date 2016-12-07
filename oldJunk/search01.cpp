@@ -10,7 +10,7 @@
 #define M 6
 #define N 1
 #define NSTATES 24*24*24*24*24*24 // Should be 24^(N*M)
-#define THREAD_COUNT 1
+#define THREAD_COUNT 8	
 
 using namespace std;
 
@@ -131,24 +131,19 @@ int main()
 		int from = 0;
 		int to;
 		int interval = NSTATES / THREAD_COUNT;
-		if (nKnown > 0)
+
+		for (int i = 0; i < THREAD_COUNT - 1; ++i)
 		{
-			for (int i = 0; i < THREAD_COUNT - 1; ++i)
-			{
-				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-				threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnown), std::ref(nNewKnown));
-				from = to;
-			}
+			to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
+			threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnown), std::ref(nNewKnown));
+			from = to;
 		}
 
 		findNeightbours(from, NSTATES, std::ref(known), std::ref(newKnown), std::ref(nNewKnown));
 
-		if (nKnown > 0)
+		for (int i = 0; i < THREAD_COUNT - 1; ++i)
 		{
-			for (int i = 0; i < THREAD_COUNT - 1; ++i)
-			{
-				threads[i].join();
-			}
+			threads[i].join();
 		}
 
 		for (int i = 0; i < NSTATES; ++i)
