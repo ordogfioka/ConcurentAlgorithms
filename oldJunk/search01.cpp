@@ -4,12 +4,13 @@
 #include <chrono>
 #include <ctime>
 #include <thread>
+#include <atomic>
 #include <mutex>
 
 #define M 6
 #define N 1
 #define NSTATES 24*24*24*24*24*24 // Should be 24^(N*M)
-#define THREAD_COUNT 4
+#define THREAD_COUNT 1
 
 using namespace std;
 
@@ -32,10 +33,11 @@ void n2tuple(int k, vector<int>& ret)
 	}
 }
 
-void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKnown, int &nNewKnown)
+void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKnown, std::atomic<int> &nNewKnown)
 {
 	vector<int> tuple(M*N);
 	int curr, j, k, neighb;
+	int found = 0;
 	for (curr = from; curr < to; ++curr)
 	{
 		// For all known points
@@ -56,7 +58,7 @@ void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKno
 				}
 				if (!newKnown[neighb])
 				{
-					++nNewKnown;
+					++found;
 					newKnown[neighb] = true;
 				}
 				// Down neighbour
@@ -67,7 +69,7 @@ void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKno
 				}
 				if (!newKnown[neighb])
 				{
-					++nNewKnown;
+					++found;
 					newKnown[neighb] = true;
 				}
 			}
@@ -82,7 +84,7 @@ void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKno
 				}
 				if (!newKnown[neighb])
 				{
-					++nNewKnown;
+					++found;
 					newKnown[neighb] = true;
 				}
 				// Right neighbour
@@ -93,12 +95,15 @@ void findNeightbours(int from, int to, vector<bool> &known, vector<bool> &newKno
 				}
 				if (!newKnown[neighb])
 				{
-					++nNewKnown;
+					++found;
 					newKnown[neighb] = true;
 				}
 			}
 		}
 	}
+	// std::cout << nNewKnown << " + " << found << " = ";
+	nNewKnown += found;
+	// std::cout << nNewKnown << "\n";
 }
 
 int main()
@@ -110,7 +115,7 @@ int main()
 	newKnown[0] = true;
 
 	int nKnown = 0;
-	int nNewKnown = 1;
+	std::atomic<int> nNewKnown(1);
 	int level = 0;
 
 	chrono::time_point<chrono::system_clock> start, end;
@@ -135,7 +140,9 @@ int main()
 				from = to;
 			}
 		}
-		findNeightbours(from, NSTATES, known, newKnown, nNewKnown);
+
+		findNeightbours(from, NSTATES, std::ref(known), std::ref(newKnown), std::ref(nNewKnown));
+
 		if (nKnown > 0)
 		{
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
