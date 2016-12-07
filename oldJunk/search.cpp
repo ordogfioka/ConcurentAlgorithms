@@ -5,6 +5,7 @@
 #include <ext/hash_set>
 #include <chrono>
 #include <ctime>
+#include <thread>
 
 #define M 6
 #define N 1
@@ -29,10 +30,10 @@ void n2tuple(int k, vector<int>& ret)
 	}
 }
 
-int main()
-{
-	chrono::time_point<chrono::system_clock> start, end;
 
+
+int main(int argc, char** argv)
+{
 	vector<bool> known(NSTATES, false);
 	known[0] = true;
 
@@ -45,7 +46,7 @@ int main()
 
 	vector<int> tuple(M*N);
 
-
+	chrono::time_point<chrono::system_clock> start, end;
 	start = chrono::system_clock::now();
 	while (0 != nNewKnown) {
 		cout << "There are " << (nNewKnown) << " states on level " << level << " .\n";
@@ -87,7 +88,8 @@ int main()
 				}
 				if (!known[neighb]) {
 					newKnown.insert(neighb);
-				}	  // Right neighbour
+				}	  
+				// Right neighbour
 				neighb = *it;
 				for (k = j; k < M*N; k += N) {
 					neighb += Right[tuple[k]] * Pow24[k];
