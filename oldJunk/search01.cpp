@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <iostream>
 #include <vector>
+#include <chrono>
+#include <ctime>
 #include <thread>
 #include <mutex>
 
@@ -111,6 +113,8 @@ int main()
 	int nNewKnown = 1;
 	int level = 0;
 
+	chrono::time_point<chrono::system_clock> start, end;
+	start = chrono::system_clock::now();
 
 	while (nKnown != nNewKnown)
 	{
@@ -150,5 +154,10 @@ int main()
 		cout << endl;
 
 	}
+	end = chrono::system_clock::now();
+	chrono::duration<double> elapsed_seconds = end - start;
+
 	cout << "Altogether " << nKnown << " states reached.\n";
+
+	cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
 }
