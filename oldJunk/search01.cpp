@@ -11,7 +11,7 @@
 
 using namespace std;
 
-mutex m;
+// mutex m;
 
 // Global arrays
 int Up[24] = { 22, 15, 18, 7, 10, 3, 17, 10, 10, -5, 2, -9, 9, -2, 5, -10, -10, -17, -3, -10, -7, -18, -15, -22 };
@@ -118,20 +118,26 @@ int main()
 		++level;
 		nKnown = nNewKnown;
 
-		thread threads[THREAD_COUNT];
+		thread threads[THREAD_COUNT - 1];
 		int from = 0;
 		int to;
 		int interval = NSTATES / THREAD_COUNT;
-		for (int i = 0; i < THREAD_COUNT; ++i)
+		if (nKnown > 0)
 		{
-			to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-			threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnown), std::ref(nNewKnown));
-			from = to;
+			for (int i = 0; i < THREAD_COUNT - 1; ++i)
+			{
+				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
+				threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnown), std::ref(nNewKnown));
+				from = to;
+			}
 		}
-
-		for (int i = 0; i < THREAD_COUNT; ++i)
+		findNeightbours(from, NSTATES, known, newKnown, nNewKnown);
+		if (nKnown > 0)
 		{
-			threads[i].join();
+			for (int i = 0; i < THREAD_COUNT - 1; ++i)
+			{
+				threads[i].join();
+			}
 		}
 
 		for (int i = 0; i < NSTATES; ++i)
