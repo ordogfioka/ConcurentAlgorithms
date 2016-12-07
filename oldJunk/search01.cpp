@@ -12,7 +12,6 @@
 #define NSTATES 24*24*24*24*24*24 // Should be 24^(N*M)
 #define THREAD_COUNT 8
 
-// mutex m;
 
 // Global arrays
 int Up[24] = { 22, 15, 18, 7, 10, 3, 17, 10, 10, -5, 2, -9, 9, -2, 5, -10, -10, -17, -3, -10, -7, -18, -15, -22 };
@@ -21,6 +20,8 @@ int Left[24] = { 10, 7, 14, 11, 18, 15, -2, -5, 9, 3, 13, 7, -7, -13, -3, -9, 5,
 int Right[24] = { 13, 18, 5, 15, 2, 7, 9, 14, -7, 11, -10, 3, -3, 10, -11, 7, -14, -9, -7, -2, -15, -5, -18, -13 };
 
 int Pow24[7] = { 1, 24, 576, 13824, 331776, 7962624, 191102976 }; //, 4586471424L, 110075314176L, 2641807540224L;
+
+
 
 void n2tuple(int k, std::vector<int>& ret)
 {
@@ -31,9 +32,66 @@ void n2tuple(int k, std::vector<int>& ret)
 	}
 }
 
+void getNeighbours(int& curr, int& neighb, std::vector<bool> &newKnown, std::vector<int> &tuple, std::vector<int>& neighbours)
+{
+	neighbours.clear();
+	
+	// For all its neighbours, make them known, too.
+	// For each row
+	for (int j = 0; j < M; ++j)
+	{
+		// Up neighbour
+		neighb = curr;
+		for (int k = j*N; k < (j + 1)*N; ++k)
+		{
+			neighb += Up[tuple[k]] * Pow24[k];
+		}
+		if (!newKnown[neighb])
+		{
+			neighbours.push_back(neighb);
+		}
+		// Down neighbour
+		neighb = curr;
+		for (int k = j*N; k < (j + 1)*N; ++k)
+		{
+			neighb += Down[tuple[k]] * Pow24[k];
+		}
+		if (!newKnown[neighb])
+		{
+			neighbours.push_back(neighb);
+		}
+	}
+	// For each column
+	for (int j = 0; j < N; ++j)
+	{
+		// Left neighbour
+		neighb = curr;
+		for (int k = j; k < M*N; k += N)
+		{
+			neighb += Left[tuple[k]] * Pow24[k];
+		}
+		if (!newKnown[neighb])
+		{
+			neighbours.push_back(neighb);
+		}
+		// Right neighbour
+		neighb = curr;
+		for (int k = j; k < M*N; k += N)
+		{
+			neighb += Right[tuple[k]] * Pow24[k];
+		}
+		if (!newKnown[neighb])
+		{
+			neighbours.push_back(neighb);
+		}
+	}
+}
+
+
 void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<bool> &newKnown, std::atomic<int> &nNewKnown)
 {
 	std::vector<int> tuple(M*N);
+	std::vector<int> neighbours;
 	int neighb;
 	int found = 0;
 	for (int curr = from; curr < to; ++curr)
@@ -43,60 +101,15 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 		{
 			// Convert to tuple
 			n2tuple(curr, tuple);
+			// ref-fel kevesebb memória foglalás van, jobb mint ha a fv hozná létre, mert akk minden meghívásnál teljesen újat csinálna, így pedig csak egy van 
+			getNeighbours(std::ref(curr), std::ref(neighb), std::ref(newKnown), std::ref(tuple), std::ref(neighbours));
+			found += neighbours.size();
 
-			// For all its neighbours, make them known, too.
-			// For each row
-			for (int j = 0; j < M; ++j)
+			for (auto n : neighbours)
 			{
-				// Up neighbour
-				neighb = curr;
-				for (int k = j*N; k < (j + 1)*N; ++k)
-				{
-					neighb += Up[tuple[k]] * Pow24[k];
-				}
-				if (!newKnown[neighb])
-				{
-					++found;
-					newKnown[neighb] = true;
-				}
-				// Down neighbour
-				neighb = curr;
-				for (int k = j*N; k < (j + 1)*N; ++k)
-				{
-					neighb += Down[tuple[k]] * Pow24[k];
-				}
-				if (!newKnown[neighb])
-				{
-					++found;
-					newKnown[neighb] = true;
-				}
+				newKnown[n] = true;
 			}
-			// For each column
-			for (int j = 0; j < N; ++j)
-			{
-				// Left neighbour
-				neighb = curr;
-				for (int k = j; k < M*N; k += N)
-				{
-					neighb += Left[tuple[k]] * Pow24[k];
-				}
-				if (!newKnown[neighb])
-				{
-					++found;
-					newKnown[neighb] = true;
-				}
-				// Right neighbour
-				neighb = curr;
-				for (int k = j; k < M*N; k += N)
-				{
-					neighb += Right[tuple[k]] * Pow24[k];
-				}
-				if (!newKnown[neighb])
-				{
-					++found;
-					newKnown[neighb] = true;
-				}
-			}
+			
 		}
 	}
 	// std::cout << nNewKnown << " + " << found << " = ";
