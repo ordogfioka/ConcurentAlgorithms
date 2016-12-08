@@ -5,7 +5,7 @@
 #include <ctime>
 #include <thread>
 #include <atomic>
-#include <mutex>
+
 
 #define M 6
 #define N 1
@@ -22,7 +22,6 @@ int Right[24] = { 13, 18, 5, 15, 2, 7, 9, 14, -7, 11, -10, 3, -3, 10, -11, 7, -1
 int Pow24[7] = { 1, 24, 576, 13824, 331776, 7962624, 191102976 }; //, 4586471424L, 110075314176L, 2641807540224L;
 
 
-
 void n2tuple(int k, std::vector<int>& ret)
 {
 	for (int i = 0; i < M*N; ++i)
@@ -32,69 +31,12 @@ void n2tuple(int k, std::vector<int>& ret)
 	}
 }
 
-/// Puts every new neighbours in to neighbours vector, using the neighb as a temporary container, but doesn't chage the other params.
-void getNeighbours(int& curr, int& neighb, std::vector<bool> &newKnown, std::vector<int> &tuple, std::vector<int>& neighbours)
-{
-	neighbours.clear();
-	
-	// For all its neighbours, make them known, too.
-	// For each row
-	for (int j = 0; j < M; ++j)
-	{
-		// Up neighbour
-		neighb = curr;
-		for (int k = j*N; k < (j + 1)*N; ++k)
-		{
-			neighb += Up[tuple[k]] * Pow24[k];
-		}
-		if (!newKnown[neighb])
-		{
-			neighbours.push_back(neighb);
-		}
-		// Down neighbour
-		neighb = curr;
-		for (int k = j*N; k < (j + 1)*N; ++k)
-		{
-			neighb += Down[tuple[k]] * Pow24[k];
-		}
-		if (!newKnown[neighb])
-		{
-			neighbours.push_back(neighb);
-		}
-	}
-	// For each column
-	for (int j = 0; j < N; ++j)
-	{
-		// Left neighbour
-		neighb = curr;
-		for (int k = j; k < M*N; k += N)
-		{
-			neighb += Left[tuple[k]] * Pow24[k];
-		}
-		if (!newKnown[neighb])
-		{
-			neighbours.push_back(neighb);
-		}
-		// Right neighbour
-		neighb = curr;
-		for (int k = j; k < M*N; k += N)
-		{
-			neighb += Right[tuple[k]] * Pow24[k];
-		}
-		if (!newKnown[neighb])
-		{
-			neighbours.push_back(neighb);
-		}
-	}
-}
-
 // Every thread must have a separate bitvector.
 // Find neighbours in the [from, to) interval and put them in the newKnown vector.
-void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<bool> &newKnown) //, std::atomic<int> &nNewKnown)
+void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<bool> &newKnown)
 {
 	std::vector<int> tuple(M*N);
 	int neighb;
-	// int found = 0;
 	for (int curr = from; curr < to; ++curr)
 	{
 		// For all known points
@@ -115,7 +57,6 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 				}
 				if (!newKnown[neighb])
 				{
-					// ++found;
 					newKnown[neighb] = true;
 				}
 				// Down neighbour
@@ -126,7 +67,6 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 				}
 				if (!newKnown[neighb])
 				{
-					// ++found;
 					newKnown[neighb] = true;
 				}
 			}
@@ -141,7 +81,6 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 				}
 				if (!newKnown[neighb])
 				{
-					// ++found;
 					newKnown[neighb] = true;
 				}
 				// Right neighbour
@@ -152,16 +91,12 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 				}
 				if (!newKnown[neighb])
 				{
-					// ++found;
 					newKnown[neighb] = true;
 				}
 			}
 			
 		}
 	}
-	// std::cout << nNewKnown << " + " << found << " = ";
-	// nNewKnown += found;
-	// std::cout << nNewKnown << "\n";
 }
 
 // In the [from,to) interval: Merge all bitvectors(newKnowns) into one(known), count the newly found ones and add that to the nNewKnown.
@@ -195,9 +130,12 @@ int mergeNewKnowns(int from, int to, std::vector<bool> &known, std::vector<std::
 
 int main(int argc, char** argv)
 {
+	// For efficiency reasons the declarations are here!
+
 	std::vector<bool> known(NSTATES, false);
 	known[0] = true;
 
+	// Separate bitvector for every thread.
 	std::vector<std::vector<bool>> newKnowns;
 	for (int i = 0; i < THREAD_COUNT; ++i)
 	{
@@ -225,10 +163,10 @@ int main(int argc, char** argv)
 		for (int i = 0; i < THREAD_COUNT - 1; ++i)
 		{
 			to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-			threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnowns[i])); // , std::ref(nNewKnown));
+			threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnowns[i]));
 			from = to;
 		}
-		findNeightbours(from, NSTATES, std::ref(known), std::ref(newKnowns[THREAD_COUNT-1])); // , std::ref(nNewKnown));
+		findNeightbours(from, NSTATES, std::ref(known), std::ref(newKnowns[THREAD_COUNT-1]));
 		for (int i = 0; i < THREAD_COUNT - 1; ++i)
 		{
 			threads[i].join();
@@ -248,20 +186,12 @@ int main(int argc, char** argv)
 			threads[i].join();
 		}
 
-		// for (int i = 0; i < NSTATES; ++i)
-		// {
-		// 	if (newKnown[i] && !known[i])
-		// 	{
-		// 		known[i] = true;
-		// 	}
-		// }
 		std::cout << std::endl;
-
 	}
+
 	auto end = std::chrono::system_clock::now();
 	std::chrono::duration<double> elapsed_seconds = end - start;
 
 	std::cout << "Altogether " << nKnown << " states reached.\n";
-
 	std::cout << "Elapsed time: " << elapsed_seconds.count() << "s\n";
 }
