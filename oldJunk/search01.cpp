@@ -7,9 +7,9 @@
 #include <atomic>
 
 
-#define M 6
+#define M 7
 #define N 1
-#define NSTATES 24*24*24*24*24*24 // Should be 24^(N*M)
+// #define NSTATES 24*24*24*24*24*24 // Should be 24^(N*M)
 #define THREAD_COUNT 8
 
 
@@ -19,10 +19,10 @@ int Down[24] = { 17, 22, 9, 18, 5, 10, 10, 15, -3, 10, -7, 2, -2, 7, -10, 3, -15
 int Left[24] = { 10, 7, 14, 11, 18, 15, -2, -5, 9, 3, 13, 7, -7, -13, -3, -9, 5, 2, -15, -18, -11, -14, -7, -10 };
 int Right[24] = { 13, 18, 5, 15, 2, 7, 9, 14, -7, 11, -10, 3, -3, 10, -11, 7, -14, -9, -7, -2, -15, -5, -18, -13 };
 
-int Pow24[7] = { 1, 24, 576, 13824, 331776, 7962624, 191102976 }; //, 4586471424L, 110075314176L, 2641807540224L;
+unsigned long long Pow24[10] = { 1, 24, 576, 13824, 331776, 7962624, 191102976, 4586471424L, 110075314176L, 2641807540224L };
 
 
-void n2tuple(int k, std::vector<int>& ret)
+void n2tuple(unsigned long long k, std::vector<unsigned long long>& ret)
 {
 	for (int i = 0; i < M*N; ++i)
 	{
@@ -33,11 +33,11 @@ void n2tuple(int k, std::vector<int>& ret)
 
 // Every thread must have a separate bitvector.
 // Find neighbours in the [from, to) interval and put them in the newKnown vector.
-void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<bool> &newKnown)
+void findNeightbours(unsigned long long from, unsigned long long to, std::vector<bool> &known, std::vector<bool> &newKnown)
 {
-	std::vector<int> tuple(M*N);
-	int neighb;
-	for (int curr = from; curr < to; ++curr)
+	std::vector<unsigned long long> tuple(M*N);
+	unsigned long long neighb;
+	for (unsigned long long curr = from; curr < to; ++curr)
 	{
 		// For all known points
 		if (known[curr])
@@ -94,22 +94,22 @@ void findNeightbours(int from, int to, std::vector<bool> &known, std::vector<boo
 					newKnown[neighb] = true;
 				}
 			}
-			
+
 		}
 	}
 }
 
 // In the [from,to) interval: Merge all bitvectors(newKnowns) into one(known), count the newly found ones and add that to the nNewKnown.
-int mergeNewKnowns(int from, int to, std::vector<bool> &known, std::vector<std::vector<bool>> &newKnowns, std::atomic<int> &nNewKnown)
+void mergeNewKnowns(unsigned long long from, unsigned long long to, std::vector<bool> &known, std::vector<std::vector<bool>> &newKnowns, std::atomic<int> &nNewKnown)
 {
 	int newCount = 0;
 	bool found;
-	for (int curr = from; curr < to; ++curr)
+	for (unsigned long long curr = from; curr < to; ++curr)
 	{
 		if (!known[curr])
 		{
 			found = false;
-			for (int j = 0; j < newKnowns.size(); ++j)
+			for (unsigned int j = 0; j < newKnowns.size(); ++j)
 			{
 				found = newKnowns[j][curr];
 				if (found) break;
@@ -117,7 +117,7 @@ int mergeNewKnowns(int from, int to, std::vector<bool> &known, std::vector<std::
 			if (found)
 			{
 				known[curr] = true;
-				for (int j = 0; j < newKnowns.size(); ++j)
+				for (unsigned int j = 0; j < newKnowns.size(); ++j)
 				{
 					newKnowns[j][curr] = true;
 				}
@@ -130,10 +130,14 @@ int mergeNewKnowns(int from, int to, std::vector<bool> &known, std::vector<std::
 
 int main(int argc, char** argv)
 {
+	unsigned long long NSTATES = Pow24[M*N];
+	// std::cout << sizeof(size_t) << std::endl;
+
 	// For efficiency reasons the declarations are here!
 
 	std::vector<bool> known(NSTATES, false);
 	known[0] = true;
+	// std::cout << known.max_size() << std::endl;
 
 	// Separate bitvector for every thread.
 	std::vector<std::vector<bool>> newKnowns;
@@ -148,45 +152,64 @@ int main(int argc, char** argv)
 	std::atomic<int> nNewKnown(1);
 	int level = 0;
 
-	int from, to;
-	int interval = NSTATES / THREAD_COUNT;
+	unsigned long from, to;
+	unsigned long interval = NSTATES / THREAD_COUNT;
 	std::thread threads[THREAD_COUNT - 1];
 	auto start = std::chrono::system_clock::now();
 
-	while (nKnown != nNewKnown)
+	try
 	{
-		std::cout << "There are " << (nNewKnown - nKnown) << " states on level " << level << " .\n";
-		++level;
-		nKnown = nNewKnown;
-
-		from = 0;
-		for (int i = 0; i < THREAD_COUNT - 1; ++i)
+		while (nKnown != nNewKnown)
 		{
-			to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-			threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnowns[i]));
-			from = to;
-		}
-		findNeightbours(from, NSTATES, std::ref(known), std::ref(newKnowns[THREAD_COUNT-1]));
-		for (int i = 0; i < THREAD_COUNT - 1; ++i)
-		{
-			threads[i].join();
-		}
+			std::cout << "There are " << (nNewKnown - nKnown) << " states on level " << level << ".\n";
+			++level;
+			nKnown = nNewKnown;
+
+			from = 0;
+			for (int i = 0; i < THREAD_COUNT - 1; ++i)
+			{
+				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
+				threads[i] = std::thread(findNeightbours, from, to, std::ref(known), std::ref(newKnowns[i]));
+				from = to;
+			}
+			findNeightbours(from, NSTATES, std::ref(known), std::ref(newKnowns[THREAD_COUNT - 1]));
+			for (int i = 0; i < THREAD_COUNT - 1; ++i)
+			{
+				threads[i].join();
+			}
 
 
-		from = 0;
-		for (int i = 0; i < THREAD_COUNT - 1; ++i)
-		{
-			to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-			threads[i] = std::thread(mergeNewKnowns, from, to, std::ref(known), std::ref(newKnowns), std::ref(nNewKnown));
-			from = to;
-		}
-		mergeNewKnowns(from, NSTATES, std::ref(known), std::ref(newKnowns), std::ref(nNewKnown));
-		for (int i = 0; i < THREAD_COUNT - 1; ++i)
-		{
-			threads[i].join();
-		}
+			from = 0;
+			for (int i = 0; i < THREAD_COUNT - 1; ++i)
+			{
+				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
+				threads[i] = std::thread(mergeNewKnowns, from, to, std::ref(known), std::ref(newKnowns), std::ref(nNewKnown));
+				from = to;
+			}
+			mergeNewKnowns(from, NSTATES, std::ref(known), std::ref(newKnowns), std::ref(nNewKnown));
+			for (int i = 0; i < THREAD_COUNT - 1; ++i)
+			{
+				threads[i].join();
+			}
 
-		std::cout << std::endl;
+			std::cout << std::endl;
+		}
+	}
+	catch (const std::runtime_error& re)
+	{
+		// speciffic handling for runtime_error
+		std::cerr << "Runtime error: " << re.what() << std::endl;
+	}
+	catch (const std::exception& ex)
+	{
+		// speciffic handling for all exceptions extending std::exception, except
+		// std::runtime_error which is handled explicitly
+		std::cerr << "Error occurred: " << ex.what() << std::endl;
+	}
+	catch (...)
+	{
+		// catch any other errors (that we have no information about)
+		std::cerr << "Unknown failure occurred. Possible memory corruption" << std::endl;
 	}
 
 	auto end = std::chrono::system_clock::now();
