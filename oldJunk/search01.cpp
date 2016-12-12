@@ -31,7 +31,7 @@ void n2myTuple(int k, vector<int>& ret)
 	}
 }
 
-void doit(long start,long end)
+void doit(int start,int end)
 {
 	int curr, j, k, neighb;
 	for (curr = start; curr < end; ++curr) 
@@ -52,7 +52,6 @@ void doit(long start,long end)
 				{
 					neighb += Up[myTuple[k]] * Pow24[k];
 				}
-				if (!newKnown[neighb]) 
 				{
 					newKnown[neighb] = true;
 				}
@@ -62,7 +61,6 @@ void doit(long start,long end)
 				{
 					neighb += Down[myTuple[k]] * Pow24[k];
 				}
-				if (!newKnown[neighb]) 
 				{
 					newKnown[neighb] = true;
 				}
@@ -76,7 +74,6 @@ void doit(long start,long end)
 				{
 					neighb += Left[myTuple[k]] * Pow24[k];
 				}
-				if (!newKnown[neighb]) 
 				{
 					newKnown[neighb] = true;
 				}
@@ -86,7 +83,6 @@ void doit(long start,long end)
 				{
 					neighb += Right[myTuple[k]] * Pow24[k];
 				}
-				if (!newKnown[neighb]) 
 				{
 					newKnown[neighb] = true;
 				}
@@ -119,7 +115,6 @@ int main()
 	cout <<"The program will use "<<THREADS << " concurent threads!"<<endl;
 	known[0] = true;
 	oldKnown[0] = true;
-	newKnown[0] = true;
 
 	int nKnown = 0;
 	nNewKnown = 1;
@@ -174,5 +169,5 @@ int main()
 	auto end = std::chrono::steady_clock::now();
 	cout << "Altogether " << nKnown << " states reached.\n";
 	std::chrono::duration<double> diff = end-start;
-    std::cout << "Time required:" << diff.count() << " s\n";
+	std::cout << "Time required:" << diff.count() << " s\n";
 }
