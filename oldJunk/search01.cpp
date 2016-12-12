@@ -5,8 +5,7 @@
 
 #define M 6
 #define N 1
-#define NSTATES 24*24*24*24*24*24 // Should be 24^(N*M)
-
+int NSTATES = 24*24*24*24*24*24;// Should be 24^(N*M)
 using namespace std;
 
 // Global arrays
@@ -18,6 +17,7 @@ int Right[24] = {13, 18, 5, 15, 2, 7, 9, 14, -7, 11, -10, 3, -3, 10, -11, 7, -14
 int Pow24[7] = {1, 24, 576, 13824, 331776, 7962624, 191102976}; //, 4586471424L, 110075314176L, 2641807540224L;
 
 vector<bool> known(NSTATES, false);
+vector<bool> oldKnown(NSTATES, false);
 vector<bool> newKnown(NSTATES, false);
 vector<int> myTuple(M*N);
 atomic<int> nNewKnown;
@@ -31,14 +31,13 @@ void n2myTuple(int k, vector<int>& ret)
 	}
 }
 
-void doit(int start,int end)
+void doit(long start,long end)
 {
-	int myNewKnown = 0;
 	int curr, j, k, neighb;
 	for (curr = start; curr < end; ++curr) 
 	{
 		// For all known points
-		if (known[curr]) 
+		if (oldKnown[curr]) 
 		{
 			// Convert to myTuple
 			n2myTuple(curr, myTuple);
@@ -55,7 +54,6 @@ void doit(int start,int end)
 				}
 				if (!newKnown[neighb]) 
 				{
-					++myNewKnown; 
 					newKnown[neighb] = true;
 				}
 				// Down neighbour
@@ -66,7 +64,6 @@ void doit(int start,int end)
 				}
 				if (!newKnown[neighb]) 
 				{
-					++myNewKnown; 
 					newKnown[neighb] = true;
 				}
 			}
@@ -81,7 +78,6 @@ void doit(int start,int end)
 				}
 				if (!newKnown[neighb]) 
 				{
-					++myNewKnown; 
 					newKnown[neighb] = true;
 				}
 				// Right neighbour
@@ -92,24 +88,29 @@ void doit(int start,int end)
 				}
 				if (!newKnown[neighb]) 
 				{
-					++myNewKnown; 
 					newKnown[neighb] = true;
 				}
 			}
 		}
 	}
-	nNewKnown += myNewKnown;
 }
 
 void doit2(int begin,int end)
 {
+	int myNewKnown = 0;
 	for (int i = begin; i < end; ++i) 
 	{
 		if (newKnown[i] && !known[i]) 
 		{
+			oldKnown[i] = true;
 			known[i] = true;
+			++myNewKnown;
+		} else
+		{
+			oldKnown[i] = false;
 		}
 	}
+	nNewKnown += myNewKnown;
 }
 
 int main()
@@ -117,6 +118,7 @@ int main()
 	int THREADS = std::thread::hardware_concurrency();
 	cout <<"The program will use "<<THREADS << " concurent threads!"<<endl;
 	known[0] = true;
+	oldKnown[0] = true;
 	newKnown[0] = true;
 
 	int nKnown = 0;
@@ -126,6 +128,7 @@ int main()
 	
 	while (nKnown != nNewKnown) 
 	{
+		newKnown = oldKnown;
 		cout << "There are " << (nNewKnown - nKnown) << " states on level " << level << " .\n";
 		++level;
 		nKnown = nNewKnown;
