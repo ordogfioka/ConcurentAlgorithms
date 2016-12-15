@@ -103,6 +103,7 @@ void findNeighbours(unsigned long long from, unsigned long long to, std::vector<
 			}
 		}
 		else
+		{
 			if (!known[curr])
 			{
 				isCanceled = false;
@@ -122,6 +123,7 @@ void findNeighbours(unsigned long long from, unsigned long long to, std::vector<
 					if (newKnown[neighb])
 					{
 						newKnown[curr] = true;
+						++trueCount;
 						isCanceled = true;
 						break;
 					}
@@ -136,48 +138,54 @@ void findNeighbours(unsigned long long from, unsigned long long to, std::vector<
 					if (newKnown[neighb])
 					{
 						newKnown[curr] = true;
+						++trueCount;
 						isCanceled = true;
 						break;
 					}
 					if (isCanceled)
 						break;
 				}
-				if (!isCanceled)
+				
+				if (isCanceled)
+					break;
+
+				// For each column
+				for (int j = 0; j < N; ++j)
 				{
-					// For each column
-					for (int j = 0; j < N; ++j)
+					// Left neighbour
+					neighb = curr;
+					for (int k = j; k < M*N; k += N)
 					{
-						// Left neighbour
-						neighb = curr;
-						for (int k = j; k < M*N; k += N)
-						{
-							neighb += Left[tuple[k]] * Pow24[k];
-						}
-						if (newKnown[neighb])
-						{
-							newKnown[curr] = true;
-							isCanceled = true;
-							break;
-						}
-						if (isCanceled)
-							break;
-						// Right neighbour
-						neighb = curr;
-						for (int k = j; k < M*N; k += N)
-						{
-							neighb += Right[tuple[k]] * Pow24[k];
-						}
-						if (newKnown[neighb])
-						{
-							newKnown[curr] = true;
-							isCanceled = true;
-							break;
-						}
-						if (isCanceled)
-							break;
+						neighb += Left[tuple[k]] * Pow24[k];
 					}
+					if (newKnown[neighb])
+					{
+						newKnown[curr] = true;
+						++trueCount;
+						isCanceled = true;
+						break;
+					}
+					if (isCanceled)
+						break;
+					// Right neighbour
+					neighb = curr;
+					for (int k = j; k < M*N; k += N)
+					{
+						neighb += Right[tuple[k]] * Pow24[k];
+					}
+					if (newKnown[neighb])
+					{
+						newKnown[curr] = true;
+						++trueCount;
+						isCanceled = true;
+						break;
+					}
+					if (isCanceled)
+						break;
 				}
+
 			}
+		}
 	}
 }
 
