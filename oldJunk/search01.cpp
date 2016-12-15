@@ -99,7 +99,7 @@ void findNeighbours(unsigned long long from, unsigned long long to, std::vector<
 }
 
 // In the [from,to) interval: Merge all bitvectors(newKnowns) into one(known), count the newly found ones and add that to the nNewKnown.
-void mergeNewKnowns(unsigned long long from, unsigned long long to, std::vector<bool> &known, std::vector<bool> &prevKnown, std::vector<std::vector<bool>> &newKnowns, std::atomic<int> &nNewKnown)
+void mergeNewKnowns(unsigned long long from, unsigned long long to, std::vector<bool> &known, std::vector<bool> &prevKnown, std::vector<bool> &newKnown, std::atomic<int> &nNewKnown)
 {
 	int newCount = 0;
 	bool found;
@@ -107,20 +107,11 @@ void mergeNewKnowns(unsigned long long from, unsigned long long to, std::vector<
 	{
 		if (!known[curr])
 		{
-			found = false;
-			for (unsigned int j = 0; j < newKnowns.size(); ++j)
-			{
-				found = newKnowns[j][curr];
-				if (found) break;
-			}
-			if (found)
+			if (newKnown[curr])
 			{
 				known[curr] = true;
 				prevKnown[curr] = true;
-				for (unsigned int j = 0; j < newKnowns.size(); ++j)
-				{
-					newKnowns[j][curr] = true;
-				}
+				newKnown[curr] = true;
 				++newCount;
 			}
 		}
@@ -143,16 +134,18 @@ int main(int argc, char** argv)
 	known[0] = true;
 	std::vector<bool> prevKnown(NSTATES, false);
 	prevKnown[0] = true;
+	std::vector<bool> newKnown(NSTATES, false);
+	newKnown[0] = true;
 	// std::cout << known.max_size() << std::endl;
 
 	// Separate bitvector for every thread.
-	std::vector<std::vector<bool>> newKnowns;
-	for (int i = 0; i < THREAD_COUNT; ++i)
-	{
-		std::vector<bool> newKnown(NSTATES, false);
-		newKnown[0] = true;
-		newKnowns.push_back(newKnown);
-	}
+	// std::vector<std::vector<bool>> newKnowns;
+	// for (int i = 0; i < THREAD_COUNT; ++i)
+	// {
+	// 	std::vector<bool> newKnown(NSTATES, false);
+	// 	newKnown[0] = true;
+	// 	newKnowns.push_back(newKnown);
+	// }
 
 	int nKnown = 0;
 	std::atomic<int> nNewKnown(1);
@@ -175,10 +168,10 @@ int main(int argc, char** argv)
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-				threads[i] = std::thread(findNeighbours, from, to, std::ref(prevKnown), std::ref(newKnowns[i]));
+				threads[i] = std::thread(findNeighbours, from, to, std::ref(prevKnown), std::ref(newKnown));
 				from = to;
 			}
-			findNeighbours(from, NSTATES, std::ref(prevKnown), std::ref(newKnowns[THREAD_COUNT - 1]));
+			findNeighbours(from, NSTATES, std::ref(prevKnown), std::ref(newKnown));
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				threads[i].join();
@@ -189,10 +182,10 @@ int main(int argc, char** argv)
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-				threads[i] = std::thread(mergeNewKnowns, from, to, std::ref(known), std::ref(prevKnown), std::ref(newKnowns), std::ref(nNewKnown));
+				threads[i] = std::thread(mergeNewKnowns, from, to, std::ref(known), std::ref(prevKnown), std::ref(newKnown), std::ref(nNewKnown));
 				from = to;
 			}
-			mergeNewKnowns(from, NSTATES, std::ref(known), std::ref(prevKnown), std::ref(newKnowns), std::ref(nNewKnown));
+			mergeNewKnowns(from, NSTATES, std::ref(known), std::ref(prevKnown), std::ref(newKnown), std::ref(nNewKnown));
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				threads[i].join();
