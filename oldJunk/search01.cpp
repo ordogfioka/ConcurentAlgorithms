@@ -33,164 +33,73 @@ void n2tuple(unsigned long long k, std::vector<unsigned long long>& ret)
 
 // Every thread must have a separate bitvector.
 // Find neighbours in the [from, to) interval and put them in the newKnown vector.
-void findNeighbours(unsigned long long from, unsigned long long to, std::vector<bool> &known, std::vector<bool> &newKnown, unsigned long long &trueCount)
+void findNeighbours(unsigned long long from, unsigned long long to, std::vector<bool> &prevKnown, std::vector<bool> &newKnown)
 {
 	std::vector<unsigned long long> tuple(M*N);
 	unsigned long long neighb;
-	bool l = trueCount < to - from;
-	bool isCanceled;
 	for (unsigned long long curr = from; curr < to; ++curr)
 	{
-		if (l)
-		{ 
 		// For all known points
-			if (known[curr])
+		if (prevKnown[curr])
+		{
+			// Convert to tuple
+			n2tuple(curr, tuple);
+
+			// For all its neighbours, make them known, too.
+			// For each row
+			for (int j = 0; j < M; ++j)
 			{
-				++trueCount;
-
-				// Convert to tuple
-				n2tuple(curr, tuple);
-
-				// For all its neighbours, make them known, too.
-				// For each row
-				for (int j = 0; j < M; ++j)
+				// Up neighbour
+				neighb = curr;
+				for (int k = j*N; k < (j + 1)*N; ++k)
 				{
-					// Up neighbour
-					neighb = curr;
-					for (int k = j*N; k < (j + 1)*N; ++k)
-					{
-						neighb += Up[tuple[k]] * Pow24[k];
-					}
-					if (!newKnown[neighb])
-					{
-						newKnown[neighb] = true;
-					}
-					// Down neighbour
-					neighb = curr;
-					for (int k = j*N; k < (j + 1)*N; ++k)
-					{
-						neighb += Down[tuple[k]] * Pow24[k];
-					}
-					if (!newKnown[neighb])
-					{
-						newKnown[neighb] = true;
-					}
+					neighb += Up[tuple[k]] * Pow24[k];
 				}
-				// For each column
-				for (int j = 0; j < N; ++j)
+				if (!newKnown[neighb])
 				{
-					// Left neighbour
-					neighb = curr;
-					for (int k = j; k < M*N; k += N)
-					{
-						neighb += Left[tuple[k]] * Pow24[k];
-					}
-					if (!newKnown[neighb])
-					{
-						newKnown[neighb] = true;
-					}
-					// Right neighbour
-					neighb = curr;
-					for (int k = j; k < M*N; k += N)
-					{
-						neighb += Right[tuple[k]] * Pow24[k];
-					}
-					if (!newKnown[neighb])
-					{
-						newKnown[neighb] = true;
-					}
+					newKnown[neighb] = true;
+				}
+				// Down neighbour
+				neighb = curr;
+				for (int k = j*N; k < (j + 1)*N; ++k)
+				{
+					neighb += Down[tuple[k]] * Pow24[k];
+				}
+				if (!newKnown[neighb])
+				{
+					newKnown[neighb] = true;
 				}
 			}
-		}
-		else
-		{
-			if (!known[curr])
+			// For each column
+			for (int j = 0; j < N; ++j)
 			{
-				isCanceled = false;
-				// Convert to tuple
-				n2tuple(curr, tuple);
-
-				// For all its neighbours, make them known, too.
-				// For each row
-				for (int j = 0; j < M; ++j)
+				// Left neighbour
+				neighb = curr;
+				for (int k = j; k < M*N; k += N)
 				{
-					// Up neighbour
-					neighb = curr;
-					for (int k = j*N; k < (j + 1)*N; ++k)
-					{
-						neighb += Up[tuple[k]] * Pow24[k];
-					}
-					if (newKnown[neighb])
-					{
-						newKnown[curr] = true;
-						++trueCount;
-						isCanceled = true;
-						break;
-					}
-					if (isCanceled)
-						break;
-					// Down neighbour
-					neighb = curr;
-					for (int k = j*N; k < (j + 1)*N; ++k)
-					{
-						neighb += Down[tuple[k]] * Pow24[k];
-					}
-					if (newKnown[neighb])
-					{
-						newKnown[curr] = true;
-						++trueCount;
-						isCanceled = true;
-						break;
-					}
-					if (isCanceled)
-						break;
+					neighb += Left[tuple[k]] * Pow24[k];
 				}
-				
-				if (isCanceled)
-					break;
-
-				// For each column
-				for (int j = 0; j < N; ++j)
+				if (!newKnown[neighb])
 				{
-					// Left neighbour
-					neighb = curr;
-					for (int k = j; k < M*N; k += N)
-					{
-						neighb += Left[tuple[k]] * Pow24[k];
-					}
-					if (newKnown[neighb])
-					{
-						newKnown[curr] = true;
-						++trueCount;
-						isCanceled = true;
-						break;
-					}
-					if (isCanceled)
-						break;
-					// Right neighbour
-					neighb = curr;
-					for (int k = j; k < M*N; k += N)
-					{
-						neighb += Right[tuple[k]] * Pow24[k];
-					}
-					if (newKnown[neighb])
-					{
-						newKnown[curr] = true;
-						++trueCount;
-						isCanceled = true;
-						break;
-					}
-					if (isCanceled)
-						break;
+					newKnown[neighb] = true;
 				}
-
+				// Right neighbour
+				neighb = curr;
+				for (int k = j; k < M*N; k += N)
+				{
+					neighb += Right[tuple[k]] * Pow24[k];
+				}
+				if (!newKnown[neighb])
+				{
+					newKnown[neighb] = true;
+				}
 			}
 		}
 	}
 }
 
 // In the [from,to) interval: Merge all bitvectors(newKnowns) into one(known), count the newly found ones and add that to the nNewKnown.
-void mergeNewKnowns(unsigned long long from, unsigned long long to, std::vector<bool> &known, std::vector<std::vector<bool>> &newKnowns, std::atomic<int> &nNewKnown)
+void mergeNewKnowns(unsigned long long from, unsigned long long to, std::vector<bool> &known, std::vector<bool> &prevKnown, std::vector<std::vector<bool>> &newKnowns, std::atomic<int> &nNewKnown)
 {
 	int newCount = 0;
 	bool found;
@@ -207,12 +116,17 @@ void mergeNewKnowns(unsigned long long from, unsigned long long to, std::vector<
 			if (found)
 			{
 				known[curr] = true;
+				prevKnown[curr] = true;
 				for (unsigned int j = 0; j < newKnowns.size(); ++j)
 				{
 					newKnowns[j][curr] = true;
 				}
 				++newCount;
 			}
+		}
+		else
+		{
+			prevKnown[curr] = false;
 		}
 	}
 	nNewKnown += newCount;
@@ -227,17 +141,17 @@ int main(int argc, char** argv)
 
 	std::vector<bool> known(NSTATES, false);
 	known[0] = true;
+	std::vector<bool> prevKnown(NSTATES, false);
+	prevKnown[0] = true;
 	// std::cout << known.max_size() << std::endl;
 
 	// Separate bitvector for every thread.
 	std::vector<std::vector<bool>> newKnowns;
-	std::vector<unsigned long long> trueCounts;
 	for (int i = 0; i < THREAD_COUNT; ++i)
 	{
 		std::vector<bool> newKnown(NSTATES, false);
 		newKnown[0] = true;
 		newKnowns.push_back(newKnown);
-		trueCounts.push_back(0L);
 	}
 
 	int nKnown = 0;
@@ -261,10 +175,10 @@ int main(int argc, char** argv)
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-				threads[i] = std::thread(findNeighbours, from, to, std::ref(known), std::ref(newKnowns[i]), std::ref(trueCounts[i]));
+				threads[i] = std::thread(findNeighbours, from, to, std::ref(prevKnown), std::ref(newKnowns[i]));
 				from = to;
 			}
-			findNeighbours(from, NSTATES, std::ref(known), std::ref(newKnowns[THREAD_COUNT - 1]), std::ref(trueCounts[THREAD_COUNT - 1]));
+			findNeighbours(from, NSTATES, std::ref(prevKnown), std::ref(newKnowns[THREAD_COUNT - 1]));
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				threads[i].join();
@@ -275,10 +189,10 @@ int main(int argc, char** argv)
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				to = NSTATES - (THREAD_COUNT - (i + 1))*interval;
-				threads[i] = std::thread(mergeNewKnowns, from, to, std::ref(known), std::ref(newKnowns), std::ref(nNewKnown));
+				threads[i] = std::thread(mergeNewKnowns, from, to, std::ref(known), std::ref(prevKnown), std::ref(newKnowns), std::ref(nNewKnown));
 				from = to;
 			}
-			mergeNewKnowns(from, NSTATES, std::ref(known), std::ref(newKnowns), std::ref(nNewKnown));
+			mergeNewKnowns(from, NSTATES, std::ref(known), std::ref(prevKnown), std::ref(newKnowns), std::ref(nNewKnown));
 			for (int i = 0; i < THREAD_COUNT - 1; ++i)
 			{
 				threads[i].join();
